@@ -177,7 +177,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 		}
 		transferSize=atoi(fileLen);
-		if(transferSize==0){ //FUN FUCKING FACT MY FRIENDS - C WILL LET YOU DO THIS
+		if(transferSize==0 || transferSize<0){
 			printf("\nFuzzing finished");
 			break;
 		}

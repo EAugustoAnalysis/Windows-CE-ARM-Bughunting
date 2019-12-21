@@ -6,3 +6,4 @@ Current Files:
 HarnessHandler.cpp
 - A harness to facilitate the remote fuzzing of Windows CE 4.2 programs using Peach and other fuzzers
 - Currently testing with MSXML2.dll, peach agent coming soon
+- Supports injection/hooking based fuzzing, intended for file format fuzzing

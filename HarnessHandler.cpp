@@ -19,6 +19,7 @@
 //Error codes
 #define FUZZ_TIME_ERROR 0xDEAD0500
 #define FUZZ_CRASH 0xDEAD0404
+#define NON_FUZZ_EXCEPT 0xDEAD0400 //Return value provided for standard function exceptions
 
 //Bind server port
 #define PORT 8337

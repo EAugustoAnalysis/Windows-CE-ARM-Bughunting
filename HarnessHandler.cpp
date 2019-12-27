@@ -190,7 +190,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 		}
 		transferSize=atoi(fileLen);
-		if(transferSize==0 || transferSize<0){ //FUN FUCKING FACT MY FRIENDS - C WILL LET YOU DO THIS
+		if(transferSize==0 || transferSize<0){
 			printf("\nFuzzing finished");
 			break;
 		}
@@ -222,10 +222,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		serr=send(sock2,result,strlen(result),0);
 		if(sock2==INVALID_SOCKET){
 			printf("\nClient error");
-			break;
-		}
-		if(thrd==HARNESS_CRASH){
-			printf("\nHarness error");
 			break;
 		}
 		closesocket(sock2);

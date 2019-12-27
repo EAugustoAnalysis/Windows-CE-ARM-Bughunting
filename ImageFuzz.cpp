@@ -67,8 +67,10 @@ void fuzzFunc(unsigned char* data, int size){
 		if(hModule==NULL){ //Return function failure
 			fuzzResultReturn=0x516;
 		}
-		fuzzResultReturn=0x200; //Return function success
+		else{
+			fuzzResultReturn=0x200; //Return function success
 		}
+	}
 	catch(...){
 		fuzzResultReturn=NON_FUZZ_EXCEPT ; //Return error	
 	}

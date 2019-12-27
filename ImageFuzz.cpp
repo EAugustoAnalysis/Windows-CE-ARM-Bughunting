@@ -204,8 +204,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		
 		int tOut=FUZZ_TIME_OUT;
 		int tOutLen=sizeof(tOut);
-		//setsockopt(sock2,SOL_SOCKET,SO_SNDTIMEO,(char *)&tOut,tOutLen); //Send timeout
-		//setsockopt(sock2,SOL_SOCKET,SO_RCVTIMEO,(char *)&tOut,tOutLen); //Recieve timeout
+		setsockopt(sock2,SOL_SOCKET,SO_SNDTIMEO,(char *)&tOut,tOutLen); //Send timeout
+		setsockopt(sock2,SOL_SOCKET,SO_RCVTIMEO,(char *)&tOut,tOutLen); //Recieve timeout
 		
 		char* initmsg="Fuzzer, send a filesize: ";
 		int serr=send(sock2,initmsg,strlen(initmsg),0);
@@ -225,6 +225,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		if(transferSize==0 || transferSize<0){ 
 			printf("\nFuzzing finished");
 			break;
+		}
+		if(transferSize==1){ //Length of 1 byte indicates a startup test, rerun
+			printf("\nStartup test");
+			goto Replay;
 		}
 		initmsg="Send file: ";
 		char *sockFileSigned=(char *)malloc(transferSize);
@@ -260,6 +264,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			printf("\nHarness error");
 			break;
 		}
+		Replay:
 		closesocket(sock2);
 	}
 

@@ -75,7 +75,6 @@ void fuzzFunc(unsigned char* data, int size){
 	//Restore to usermode
 	SetKMode(FALSE);
 	SetProcPermissions(oldPerm);
-	free(data);
 }
 
 DWORD WINAPI metHandler(LPVOID lpParam){
@@ -90,6 +89,7 @@ DWORD WINAPI metHandler(LPVOID lpParam){
 	_except(EXCEPTION_EXECUTE_HANDLER){
 		fuzzResultReturn=FUZZ_CRASH;
 	}
+	free(data);
 	return 0; //Dummy for the thread handler
 }
 
@@ -220,7 +220,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 		}
 		transferSize=atoi(fileLen);
-		if(transferSize==0 || transferSize<0){ //FUN FUCKING FACT MY FRIENDS - C WILL LET YOU DO THIS
+		if(transferSize==0 || transferSize<0){ 
 			printf("\nFuzzing finished");
 			break;
 		}
@@ -266,6 +266,3 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("\nExiting");
 	return 0;
 }
-
-
-

@@ -18,6 +18,7 @@
 
 //Error codes
 #define FUZZ_TIME_ERROR 0xDEAD0500
+#define HARNESS_CRASH 0xDEAD0512
 #define FUZZ_CRASH 0xDEAD0404
 #define NON_FUZZ_EXCEPT 0xDEAD0400
 
@@ -51,15 +52,10 @@ SETPROCPERMISSIONS SetProcPermissions;
 NKVDBGPRINTFW NKvDbgPrintfW;
 LOADKERNELLIBRARY LoadKernelLibrary;
 
-DWORD WINAPI metHandler(LPVOID lpParam){
-	FUZZDATA* passedData=(FUZZDATA*)lpParam;
-	int size=passedData->dataSize;
-	unsigned char* data= (unsigned char *)malloc(size);
-	memcpy(data,passedData->fuzzIn,size);
-	
+void fuzzFunc(unsigned char* data, int size){
 	//Set thread to kernel mode
 	DWORD oldPerm = SetProcPermissions(0xFFFFFFFF);
-	SetKMode(TRUE);
+	BOOL Kmode = SetKMode(TRUE);
 	
 	//Turn unsigned char* to wide string
 	wchar_t * utfData=(wchar_t *)malloc(size*2);
@@ -74,12 +70,26 @@ DWORD WINAPI metHandler(LPVOID lpParam){
 		fuzzResultReturn=0x200; //Return function success
 		}
 	catch(...){
-		fuzzResultReturn=0xDEAD0400; //Return error	
+		fuzzResultReturn=NON_FUZZ_EXCEPT ; //Return error	
 	}
 	//Restore to usermode
 	SetKMode(FALSE);
 	SetProcPermissions(oldPerm);
 	free(data);
+}
+
+DWORD WINAPI metHandler(LPVOID lpParam){
+	FUZZDATA* passedData=(FUZZDATA*)lpParam;
+	int size=passedData->dataSize;
+	unsigned char* data= (unsigned char *)malloc(size);
+	memcpy(data,passedData->fuzzIn,size);
+	
+	_try{
+		fuzzFunc(data,size);
+	}
+	_except(EXCEPTION_EXECUTE_HANDLER){
+		fuzzResultReturn=FUZZ_CRASH;
+	}
 	return 0; //Dummy for the thread handler
 }
 
@@ -109,9 +119,9 @@ DWORD threadHandler(unsigned char* funInput, int inSize){
 	}
 	_except(EXCEPTION_EXECUTE_HANDLER){
 		//Let SEH capture any exceptions and return the failure code
-		TerminateThread(fuzzMethod,404);
-		free(params.fuzzIn);
-		return FUZZ_CRASH;
+			TerminateThread(fuzzMethod,404);
+			free(params.fuzzIn);
+			return FUZZ_CRASH;
 	}
 }
 
@@ -242,6 +252,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		serr=send(sock2,result,strlen(result),0);
 		if(sock2==INVALID_SOCKET){
 			printf("\nClient error");
+			break;
+		}
+		if(thrd==HARNESS_CRASH){
+			printf("\nHarness error");
 			break;
 		}
 		closesocket(sock2);

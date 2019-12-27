@@ -5,7 +5,11 @@
 // Will be used in upcomming projects
 //
 
+
+
 #include "stdafx.h"
+#include "tchar.h"
+#include "windows.h"
 #include "Winsock2.h"
 #include "ws2tcpip.h"
 #include "stdlib.h"
@@ -18,8 +22,9 @@
 
 //Error codes
 #define FUZZ_TIME_ERROR 0xDEAD0500
+#define HARNESS_CRASH 0xDEAD0512
 #define FUZZ_CRASH 0xDEAD0404
-#define NON_FUZZ_EXCEPT 0xDEAD0400 //Return value provided for standard function exceptions
+#define NON_FUZZ_EXCEPT 0xDEAD0400
 
 //Bind server port
 #define PORT 8337
@@ -35,26 +40,33 @@ struct sockaddr_in host,client;
 //Fuzz result return value
 DWORD fuzzResultReturn;
 
-
 //Structure to store data for method being fuzzed
 struct FUZZDATA{
 	unsigned char* fuzzIn;
 	int dataSize;
 };
 
-DWORD WINAPI metHandler(LPVOID lpParam){
+void fuzzFunc(unsigned char* data, int size){
 	//This part must be edited every time a new function is being fuzzed
-	//Should return a DWORD corresponding to the return value
+	//Should set fuzzResultReturn to the return value
 	//Note: In many instances a function will return errors that are not indicators of a bug, but rather of bad input
-	//		Any expected errors for the function being tested must be handled here
+	//		Any expected C++ style errors for the function being tested must be handled here
+	
+}
 
+DWORD WINAPI metHandler(LPVOID lpParam){
 	FUZZDATA* passedData=(FUZZDATA*)lpParam;
 	int size=passedData->dataSize;
 	unsigned char* data= (unsigned char *)malloc(size);
 	memcpy(data,passedData->fuzzIn,size);
-
+	
+	_try{
+		fuzzFunc(data,size);
+	}
+	_except(EXCEPTION_EXECUTE_HANDLER){
+		fuzzResultReturn=FUZZ_CRASH;
+	}
 	free(data);
-	fuzzResultReturn=0; //The actual return value of the function being tested
 	return 0; //Dummy for the thread handler
 }
 
@@ -63,7 +75,7 @@ DWORD threadHandler(unsigned char* funInput, int inSize){
 	params.fuzzIn=(unsigned char *)malloc(inSize);
 	memcpy(params.fuzzIn,funInput,inSize);
 	params.dataSize=inSize;
-
+	fuzzResultReturn=0; //Initialize fuzzResultReturn to prevent errors during testing
 	_try{
 		//Run one iteration of fuzzing
 		DWORD retValue;
@@ -84,9 +96,9 @@ DWORD threadHandler(unsigned char* funInput, int inSize){
 	}
 	_except(EXCEPTION_EXECUTE_HANDLER){
 		//Let SEH capture any exceptions and return the failure code
-		TerminateThread(fuzzMethod,404);
-		free(params.fuzzIn);
-		return FUZZ_CRASH;
+			TerminateThread(fuzzMethod,404);
+			free(params.fuzzIn);
+			return FUZZ_CRASH;
 	}
 }
 
@@ -121,6 +133,7 @@ int bindSocket(){
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+
 	unsigned char *sockFile;
 	int transferSize; //Size of file being transfered
 	bool isFuzzing;
@@ -177,7 +190,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 		}
 		transferSize=atoi(fileLen);
-		if(transferSize==0 || transferSize<0){
+		if(transferSize==0 || transferSize<0){ //FUN FUCKING FACT MY FRIENDS - C WILL LET YOU DO THIS
 			printf("\nFuzzing finished");
 			break;
 		}
@@ -204,11 +217,15 @@ int _tmain(int argc, _TCHAR* argv[])
 		free(sockFile);
 		free(sockFileSigned);
 		char result[50];
-		sprintf(result,"Return Code: %d",thrd); //Send result of fuzzing back to agent
+		sprintf(result,"%d",thrd); //Send result of fuzzing back to agent
 		printf("\nSending result to fuzz agent");
 		serr=send(sock2,result,strlen(result),0);
 		if(sock2==INVALID_SOCKET){
 			printf("\nClient error");
+			break;
+		}
+		if(thrd==HARNESS_CRASH){
+			printf("\nHarness error");
 			break;
 		}
 		closesocket(sock2);
@@ -219,4 +236,3 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("\nExiting");
 	return 0;
 }
-

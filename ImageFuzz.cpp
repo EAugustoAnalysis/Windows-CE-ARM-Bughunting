@@ -22,16 +22,22 @@
 #define FUZZ_CRASH 0xDEAD0404
 #define NON_FUZZ_EXCEPT 0xDEAD0400
 
-//Bind server port
+//Recieve file rules
+#define MAX_FILESIZE 50000 //Max filesize of ~50kb
+#define MAX_FILEALLOC 51200 //Max recieve allocation of 50kb
+#define MIN_FILESIZE 1 //Min filesize of 4 bytes
+
+//Bind server and remote monitor port
 #define PORT 8337
+#define MONPORT 8457
 
 //Handle, global for benefit of exception handler
 HANDLE fuzzMethod;
 
 //Socket Declarations
 WSADATA wsock;
-SOCKET sock1,sock2;
-struct sockaddr_in host,client;
+SOCKET sock1,sock2,MonAgent;
+struct sockaddr_in host,client,monaddr;
 
 //Fuzz result return value
 DWORD fuzzResultReturn;
@@ -53,6 +59,7 @@ NKVDBGPRINTFW NKvDbgPrintfW;
 LOADKERNELLIBRARY LoadKernelLibrary;
 
 void fuzzFunc(unsigned char* data, int size){
+
 	//Set thread to kernel mode
 	DWORD oldPerm = SetProcPermissions(0xFFFFFFFF);
 	BOOL Kmode = SetKMode(TRUE);
@@ -167,10 +174,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	NKvDbgPrintfW=(NKVDBGPRINTFW)GetProcAddress(hModule,L"NKvDbgPrintfW");
 
 	unsigned char *sockFile;
-	int transferSize; //Size of file being transfered
-	bool isFuzzing;
-
-	isFuzzing=true; //
+	bool isFuzzing=true;
 
 	printf("Initializing winsock...");
 	if(initWinSock()==0){
@@ -204,68 +208,72 @@ int _tmain(int argc, _TCHAR* argv[])
 		
 		int tOut=FUZZ_TIME_OUT;
 		int tOutLen=sizeof(tOut);
+
+		DWORD rBuf=MAX_FILEALLOC; //Max filesize allocation is 50kb
+		int rBufLen=sizeof(rBuf);
+		DWORD rLow=MIN_FILESIZE; //Min transmission is 4 bytes
+		int rLowLen=sizeof(rLow);
+
 		setsockopt(sock2,SOL_SOCKET,SO_SNDTIMEO,(char *)&tOut,tOutLen); //Send timeout
 		setsockopt(sock2,SOL_SOCKET,SO_RCVTIMEO,(char *)&tOut,tOutLen); //Recieve timeout
-		
-		char* initmsg="Fuzzer, send a filesize: ";
-		int serr=send(sock2,initmsg,strlen(initmsg),0);
-		
-		if(sock2==INVALID_SOCKET){
+		setsockopt(sock2,SOL_SOCKET,SO_RCVBUF,(char *)&rBuf,rBufLen);
+		setsockopt(sock2,SOL_SOCKET,SO_RCVBUF,(char *)&rLow,rLowLen);
+
+
+		char *sockFileSigned=(char *)malloc(MAX_FILESIZE);
+		//memset(sockFileSigned, 0, sizeof(sockFileSigned)); //Inefficient, put here for testing purposes
+		printf("\nRequesting file");
+		int rVal= recv(sock2,sockFileSigned,MAX_FILESIZE,0); //Note: Null byte must manually be sent, not a string
+		//Exit if a real crash occurs
+		if(rVal==-1 || sock2==INVALID_SOCKET){
 			printf("\nClient error");
+			closesocket(sock2);
+			free(sockFileSigned);
 			break;
 		}
-		printf("\nRequesting file size");
-		char fileLen[6];
-		int rerr= recv(sock2,fileLen,5,0);
-		if(sock2==INVALID_SOCKET){
+		//Every once in a while the recv performs a "graceful exit"
+		//We don't want to test the function with a zero value but we do want to continue
+		if(rVal==0){
 			printf("\nClient error");
-			break;
-		}
-		transferSize=atoi(fileLen);
-		if(transferSize==0 || transferSize<0){ 
-			printf("\nFuzzing finished");
-			break;
-		}
-		if(transferSize==1){ //Length of 1 byte indicates a startup test, rerun
-			printf("\nStartup test");
+			closesocket(sock2);
+			free(sockFileSigned);
 			goto Replay;
 		}
-		initmsg="Send file: ";
-		char *sockFileSigned=(char *)malloc(transferSize);
-		sockFile=(unsigned char *)malloc(transferSize);
-		serr=send(sock2,initmsg,strlen(initmsg),0);
-		if(sock2==INVALID_SOCKET){
-			printf("\nClient error");
-			free(sockFile);
-			free(sockFileSigned);
-			break;
-		}
-		printf("\nRequesting file");
-		rerr= recv(sock2,sockFileSigned,transferSize,0);
-		if(sock2==INVALID_SOCKET){
-			printf("\nClient error");
-			free(sockFile);
-			free(sockFileSigned);
-			break;
-		}
-		memcpy(sockFile,sockFileSigned,transferSize);
-		DWORD thrd = threadHandler(sockFile,transferSize);
+		closesocket(sock2);
+		sockFile=(unsigned char *)malloc(rVal);
+		memcpy(sockFile,sockFileSigned,rVal);
+		DWORD thrd = threadHandler(sockFile,rVal);
+		printf("\nReturn Value: %d",thrd);
 		free(sockFile);
 		free(sockFileSigned);
-		char result[50];
-		sprintf(result,"%d",thrd); //Send result of fuzzing back to agent
-		printf("\nSending result to fuzz agent");
-		serr=send(sock2,result,strlen(result),0);
-		if(sock2==INVALID_SOCKET){
-			printf("\nClient error");
-			break;
+		if(thrd==FUZZ_CRASH){
+			printf("\nSending fault to fuzz agent");
+			//Create socket for connecting to monitor
+			MonAgent=socket(AF_INET,SOCK_STREAM,0);
+			if(MonAgent==INVALID_SOCKET){
+				printf("\nServer error");
+				break;
+			}
+			//Reuses client address as address of harness to avoid hardcoding addresses
+			monaddr.sin_family=AF_INET;
+			monaddr.sin_addr.s_addr=client.sin_addr.s_addr;
+			monaddr.sin_port=htons(MONPORT);
+			int conAg = connect( MonAgent, (struct sockaddr*) &monaddr, sizeof(monaddr));
+			if ( conAg == SOCKET_ERROR) {
+				closesocket(MonAgent);
+				printf("\nConnection error");
+				break;
+			}
+			char * initmsg="[fault]";
+			int serr=send(sock2,initmsg,strlen(initmsg),0);
+			if(MonAgent==INVALID_SOCKET){
+				closesocket(MonAgent);
+				printf("\nMonitor error");
+				break;
+			}
+			closesocket(MonAgent);
 		}
-		if(thrd==HARNESS_CRASH){
-			printf("\nHarness error");
-			break;
-		}
-		Replay:
-		closesocket(sock2);
+	Replay:;
 	}
 
 	closesocket(sock1);
@@ -273,3 +281,4 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("\nExiting");
 	return 0;
 }
+

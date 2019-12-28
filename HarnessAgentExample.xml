@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Peach xmlns="http://peachfuzzer.com/2012/Peach" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://peachfuzzer.com/2012/Peach /peach/peach.xsd">
+	<!-- Unsigned -->
+	<Defaults>
+		<Number signed="false"/>
+	</Defaults>
+	
+	<!-- Our target. -->
+	<DataModel name="target">
+		<Block name="main">
+			<Blob name="dllname" valueType="string" value="coredll" token="true" />
+			<Blob name="dllextend" valueType="string" value=".dll\x00" token="true" mutable="false"/>
+		</Block>
+	</DataModel>
+
+	<StateModel name="TheState" initialState="Initial">
+		<State name="Initial">
+			
+			<Action type="output">
+				<DataModel ref="target"/>
+				<!-- ANY SAMPLE FILE PATHS SHOULD BE HERE -->
+			</Action>
+
+			<Action type="close"/>
+
+			<Action type="call" method="Harness" publisher="Peach.Agent"/>
+		</State>
+
+	</StateModel>
+
+	<Agent name="TheAgent">
+		<Monitor class="Socket">
+			<Param name="Port" value="8457" />
+			<Param name="Timeout" value="5000" />
+			<Param name="StartOnCall" value="Harness"/>
+		</Monitor>
+	</Agent>
+
+	<Test name="Default">
+		<Agent ref="TheAgent"/>
+		<StateModel ref="TheState"/>
+
+		<!-- PUT THE ADDRESS OF THE HARNESS HERE -->
+		<Publisher class="Tcp">
+			<Param name="Host" value="192.168.1.1" />
+			<Param name="Port" value="8337" />
+		</Publisher>
+		
+		<Logger class="File">
+			<Param name="Path" value="logs"/>
+		</Logger>
+	</Test>
+
+</Peach>
+<!-- end -->

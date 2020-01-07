@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Peach xmlns="http://peachfuzzer.com/2012/Peach" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://peachfuzzer.com/2012/Peach /peach/peach.xsd">
+	<!-- html3.xml -->
+	<!-- Very basic HTML fuzz example based off of example.com, more advanced version coming soon -->
+	<!-- Author: Elias Augusto -->
+	<!-- Written for Peach Community Edition v3.1+ -->
+	
+	<!-- Unsigned -->
+	<Defaults>
+		<Number signed="false"/>
+	</Defaults>
+	
+	<!-- Our target. -->
+	<DataModel name="target">
+		<Block name="htmlfile">
+			<String name="doctype1" value="&lt;!DOCTYPE HTML PUBLIC &quot;" nullTerminated="false" mutable="true" token="true" length="23"/>
+			<String name="doctype2" value="-//W3C//DTD HTML 3.0 //EN" nullTerminated="false" mutable="true" length="25"/>
+			<String name="doctype3" value="&quot;&gt;" nullTerminated="false" mutable="false" token="true" length="2"/>
+			<String name="htmlopen" value="&lt;html&gt;" nullTerminated="false" mutable="true" length="6"/>
+			
+			<String name="headopen" value="&lt;head&gt;" nullTerminated="false" mutable="true" length="6"/>
+			
+			<String name="titleopen" value="&lt;title&gt;" nullTerminated="false" mutable="true" length="7"/>
+			
+			<String name="titletext" value="Example Domain" nullTerminated="false" mutable="true" length="14"/>
+			
+			<String name="titleclose" value="&lt;/title&gt;" nullTerminated="false" mutable="true" length="8"/>
+			
+			<String name="headclose" value="&lt;/head&gt;" nullTerminated="false" mutable="true" length="7"/>
+			
+			<String name="bodyopen" value="&lt;body&gt;" nullTerminated="false" mutable="true" length="6"/>
+			<String name="divopen" value="&lt;div&gt;" nullTerminated="false" mutable="true" length="5"/>
+			
+			<String name="h1open" value="&lt;h1&gt;" nullTerminated="false" mutable="true" length="4"/>
+			<String name="h1text" value="Example Domain" nullTerminated="false" mutable="true" length="14"/>
+			<String name="h1close" value="&lt;/h1&gt;" nullTerminated="false" mutable="true" length="5"/>
+			
+			<String name="popen" value="&lt;p&gt;" nullTerminated="false" mutable="true" length="3"/>
+			<String name="ptext" value="This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission." nullTerminated="false" mutable="true" length="152"/>
+			<String name="pclose" value="&lt;/p&gt;" nullTerminated="false" mutable="true" length="4"/>
+			
+			<String name="link1" value="&lt;a href=&quot;" nullTerminated="false" mutable="false" token="true" length="9"/>
+			<String name="link2" value="https://www.iana.org/domains/example" nullTerminated="false" mutable="true" length="36"/>
+			<String name="link3" value="&quot;&gt;" nullTerminated="false" mutable="false" token="true" length="2"/>
+			<String name="linktext" value="More information..." nullTerminated="false" mutable="true" length="19"/>
+			<String name="linkclose" value="&lt;/a&gt;" nullTerminated="false" mutable="false" token="true" length="4"/>
+			
+			<String name="divclose" value="&lt;/div&gt;" nullTerminated="false" mutable="true" length="6"/>
+			<String name="bodyclose" value="&lt;/body&gt;" nullTerminated="false" mutable="true" length="7"/>
+			<String name="htmlclose" value="&lt;/html&gt;" nullTerminated="true" mutable="false" token="true" length="8"/>
+		</Block>
+	</DataModel>
+
+	<StateModel name="TheState" initialState="Initial">
+		<State name="Initial">
+			
+			<Action type="output">
+				<DataModel ref="target"/>
+			</Action>
+
+			<Action type="close"/>
+
+			<Action type="call" method="Harness" publisher="Peach.Agent"/>
+		</State>
+
+	</StateModel>
+
+	<Agent name="TheAgent">
+		<Monitor class="Socket">
+			<Param name="Port" value="8457" />
+			<Param name="Timeout" value="5000" />
+			<Param name="StartOnCall" value="Harness"/>
+		</Monitor>
+	</Agent>
+
+	<Test name="Default">
+		<Agent ref="TheAgent"/>
+		<StateModel ref="TheState"/>
+
+		<!-- Our python script should be passing values on to the remote harness via an open socket here -->
+		<Publisher class="Tcp">
+			<Param name="Host" value="192.168.56.106" />
+			<Param name="Port" value="8337" />
+		</Publisher>
+		
+		<Logger class="File">
+			<Param name="Path" value="logs"/>
+		</Logger>
+	</Test>
+
+</Peach>
+<!-- end -->

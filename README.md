@@ -26,3 +26,8 @@ KeyPressTest.cpp
 html3.xml
 - A basic HTML template for peach fuzzer
 - Based off of example.com
+- Now includes updated strategies and timeouts
+
+ExampleDbgFuzz.cpp
+- An example of a fault detecting fuzzer for remote processes
+- Keypress code removed to uncomplicate example

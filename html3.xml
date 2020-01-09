@@ -75,13 +75,16 @@
 	</Agent>
 
 	<Test name="Default">
+		<Strategy class="RandomDeterministic"/>
 		<Agent ref="TheAgent"/>
 		<StateModel ref="TheState"/>
 
-		<!-- Our python script should be passing values on to the remote harness via an open socket here -->
-		<Publisher class="Tcp">
-			<Param name="Host" value="192.168.56.106" />
+		<!-- Our 10s timeout here helps ensure faults are actually processed -->
+		<Publisher class="TcpClient">
+			<Param name="Host" value="1.2.3.4" />
 			<Param name="Port" value="8337" />
+			<Param name="SendTimeout" value="10000" />
+			<Param name="ConnectTimeout" value="10000" />
 		</Publisher>
 		
 		<Logger class="File">

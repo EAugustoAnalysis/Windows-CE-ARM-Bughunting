@@ -99,9 +99,11 @@ void HunterKiller(wchar_t arg[]){ //Kills our process of choice
 	}while(testWindow!=NULL);
 }
 
+
 //Note on this function:
 //This is not a "one size fits all" solution to close the process while preventing potential freezes and errors
 //This information must be determined through use of Spy++ or Remote Spy
+void HuggerCloserPW(){ //Kills our process of choice gently
 void HuggerCloserPW(){ //Kills our process of choice gently
 	HWND testWindow=FindWindow(L"Worker",L"Pocket Word");
 
@@ -118,8 +120,7 @@ void HuggerCloserPW(){ //Kills our process of choice gently
 	
 }
 
-//Every once in a while, a mutation creates a dialog box
-//This attempts to kill it using kernel permissions, with varying degrees of success
+//Every once in a while, a mutation creates a dialog box trying to connrect to a work network. This attempts to kill it using kernel permissions
 DWORD WINAPI KillDialogue(LPVOID lpParam){
 	HWND box=NULL;
 	HWND prevBox=NULL;
@@ -127,7 +128,8 @@ DWORD WINAPI KillDialogue(LPVOID lpParam){
 		_try{
 			box=FindWindow(L"Dialog",NULL);
 			if(box!=NULL && box!=prevBox){
-				SendMessage(box,WM_DESTROY,0,0); 
+				SendMessage(box,WM_DESTROY,0,0); //This line actually kills dialog boxes quite well, just not necessarily the ones we care about
+				//Note: It also kills connection boxes, just very slowly
 			}
 			else{
 				break;
@@ -193,13 +195,13 @@ DWORD debugProc(DWORD timeout){
 					//Ignore unimportant exceptions
 					else{
 						NKDbgPrintfW(L"Boring");
-						break;
+						goto FaultExit;
 					}
 					ReturnCrash:
 						fuzzResultReturn=FUZZ_CRASH;
 						NKDbgPrintfW(L"CRASHCRASHCRASH");
 						fuzzExceptReturn=debug_event.u.Exception.ExceptionRecord.ExceptionCode;
-						break;
+						goto FaultExit;
 				}
 				else if(debug_event.dwDebugEventCode==EXIT_PROCESS_DEBUG_EVENT){
 					NKDbgPrintfW(L"Exit\n");
@@ -212,12 +214,18 @@ DWORD debugProc(DWORD timeout){
 					ContinueDebugEvent(debug_event.dwProcessId,debug_event.dwThreadId,DBG_CONTINUE);
 			}
 			return 0;
+
+			FaultExit:
+			HANDLE faultHand=OpenProcess(PROCESS_TERMINATE,FALSE,debug_event.dwProcessId);
+			if(faultHand!=NULL){
+				TerminateProcess(faultHand,404);
+			}
 }
 
 void fuzzFunc(unsigned char* data, int size){
 
-	char fuzzFilename[]="\\Program Files\\ppc.txt";
-	wchar_t procFFArgs[]=L"\\Program Files\\ppc.txt"; //Bad practice but the filename is static
+	char fuzzFilename[]="\\Program Files\\ppc.rtf";
+	wchar_t procFFArgs[]=L"\\Program Files\\ppc.rtf"; //Bad practice but the filename is static
 
 	//Turn unsigned char* to wide string
 	FILE * fuFil=fopen(fuzzFilename,"w+");
@@ -239,7 +247,7 @@ void fuzzFunc(unsigned char* data, int size){
 		
 		NKDbgPrintfW(L"Procid: %X\n",pi.dwProcessId);
 
-		debugProc(DBG_TIMEOUT);
+		DWORD exitCode=debugProc(DBG_TIMEOUT);
 
 		HWND testWindow = FindWindow(NULL,L"Pocket Word");
 
@@ -249,11 +257,13 @@ void fuzzFunc(unsigned char* data, int size){
 
 		NKDbgPrintfW(L"Procid: %X\n",testProcID);
 		
-		if(pi.dwProcessId==testProcID){ //Be gentle
-			HuggerCloserPW();
-		}
-		else{ //Be rude
-			HunterKiller(L"Pocket Word");
+		if(exitCode==0){
+			if(pi.dwProcessId==testProcID){ //Be gentle
+				HuggerCloserPW();
+			}
+			else{ //Be rude
+				HunterKiller(L"Pocket Word");
+			}
 		}
 		
 		
@@ -512,3 +522,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	NKvDbgPrintfW(L"\nExiting");
 	return 0;
 }
+
+
+
+

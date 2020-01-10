@@ -64,17 +64,6 @@ PROCESS_INFORMATION pi;
 //Running tracker for process permissions
 DWORD oldPerm;
 
-//Structure for hwnd return function
-struct windHand{
-	DWORD procID;
-	HWND window;
-};
-
-struct DEBUGPASS{
-	wchar_t *args;
-	DWORD flags;
-};
-
 //Structure to store data for method being fuzzed
 struct FUZZDATA{
 	unsigned char* fuzzIn;
@@ -144,7 +133,6 @@ DWORD WINAPI KillDialogue(LPVOID lpParam){
 			box=FindWindow(L"Dialog",NULL);
 			if(box!=NULL && box!=prevBox){
 				SendMessage(box,WM_DESTROY,0,0); 
-				//Note: It also kills connection boxes, just very slowly
 			}
 			else{
 				break;

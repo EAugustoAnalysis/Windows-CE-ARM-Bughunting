@@ -1,5 +1,4 @@
-// ExampleDbgFuzz.cpp : Example harness with debugging based fault detection
-//Note on methodology: In windows CE it is not possible to redirect error messages to the harness using SetErrorMode
+// ExampleDbgFuzz.cpp : Example debug fuzzer
 // Written in Visual Studio 2008 using the Dot Net Framework for Windows CE
 // Author: Elias Augusto
 
@@ -15,7 +14,7 @@
 #pragma comment(lib,"Ws2.lib")
 
 //Timeout for processing can be adjusted here
-#define FUZZ_TIME_OUT 8000
+#define FUZZ_TIME_OUT 9000
 #define DBG_TIMEOUT 6000
 #define KILL_DI_T 1000
 
@@ -38,7 +37,7 @@
 //Note: Enabled because peach is a dumb fuzzer
 //Peach cannot tell what payload crashed the system post of the time when debugging rather than hooking due to timing
 //This can be improved by changin the timing in your peach pitt file
-#define LOGFILENAME "\\Storage Card\\ieLogFile.txt"
+#define LOGFILENAME "\\Storage Card\\pwdlogfile.txt"
 #define ENABLE_ACTIVE_LOGGING TRUE
 
 
@@ -91,6 +90,58 @@ SETKMODE SetKMode;
 SETPROCPERMISSIONS SetProcPermissions;
 NKVDBGPRINTFW NKvDbgPrintfW;
 LOADKERNELLIBRARY LoadKernelLibrary;
+
+void HunterKiller(wchar_t arg[]){ //Kills our process of choice
+	HWND testWindow;
+	do{	
+		testWindow=NULL;
+		testWindow=FindWindow(NULL,arg);
+
+		DWORD testProcID;
+
+		if(testWindow!=NULL){
+			GetWindowThreadProcessId(testWindow,&testProcID);
+			
+			NKDbgPrintfW(L"Procid of illicit IE Window: %X\n",testProcID);
+			
+			if(testProcID!=NULL){
+				HANDLE tmpHandle=OpenProcess(PROCESS_TERMINATE,FALSE,testProcID);
+				if(tmpHandle!=NULL){
+					TerminateProcess(tmpHandle,0);
+				}
+			}
+
+		}
+	}while(testWindow!=NULL);
+}
+
+void HuggerCloserPW(){ //Kills our process of choice gently
+	HWND testWindow=FindWindow(L"Worker",L"Pocket Word");
+
+	DWORD testProcID;
+
+	if(testWindow!=NULL){
+		GetWindowThreadProcessId(testWindow,&testProcID);
+			
+		NKDbgPrintfW(L"Procid of worker window being closed: %X\n",testProcID);
+
+		SendMessage(testWindow,WM_CANCELMODE,NULL,NULL);
+
+	}
+	
+	HWND testWindow2=FindWindow(L"Pocket Word",L"Pocket Word");
+
+	DWORD testProcID2;
+
+	if(testWindow2!=NULL){
+		GetWindowThreadProcessId(testWindow,&testProcID2);
+			
+		NKDbgPrintfW(L"Procid of main window being closed: %X\n",testProcID2);
+
+		SendMessage(testWindow2,WM_CLOSE,NULL,NULL);
+
+	}
+}
 
 //Every once in a while, a mutation creates a dialog box trying to connrect to a work network. This attempts to kill it using kernel permissions
 DWORD WINAPI KillDialogue(LPVOID lpParam){
@@ -190,8 +241,8 @@ DWORD debugProc(DWORD timeout){
 
 void fuzzFunc(unsigned char* data, int size){
 
-	char fuzzFilename[]="\\Program Files\\ppc.htm";
-	wchar_t procFFArgs[]=L"\\Program Files\\ppc.htm"; //Bad practice but the filename is static
+	char fuzzFilename[]="\\Program Files\\ppc.txt";
+	wchar_t procFFArgs[]=L"\\Program Files\\ppc.txt"; //Bad practice but the filename is static
 
 	//Turn unsigned char* to wide string
 	FILE * fuFil=fopen(fuzzFilename,"w+");
@@ -204,25 +255,36 @@ void fuzzFunc(unsigned char* data, int size){
 
 	//Debug program
 	_try{
-
 		memset(&si,0,sizeof(si));
 		memset(&pi,0,sizeof(pi));
 		//DWORD cProcFlags = DEBUG_ONLY_THIS_PROCESS; //Testing
-		DWORD cProcFlags =DEBUG_PROCESS | CREATE_NEW_CONSOLE;
+		DWORD cProcFlags =DEBUG_PROCESS;
 		
-		CreateProcess(L"iexplore.exe",procFFArgs,NULL,NULL,FALSE,cProcFlags,NULL,NULL,&si,&pi);
+		CreateProcess(L"pword.exe",procFFArgs,NULL,NULL,FALSE,cProcFlags,NULL,NULL,&si,&pi);
+		
+		NKDbgPrintfW(L"Procid: %X\n",pi.dwProcessId);
 
 		debugProc(DBG_TIMEOUT);
+
+		HWND testWindow = FindWindow(NULL,L"Pocket Word");
+
+		DWORD testProcID;
+
+		GetWindowThreadProcessId(testWindow,&testProcID);
+
+		NKDbgPrintfW(L"Procid: %X\n",testProcID);
 		
-		HANDLE tmpHandle=OpenProcess(PROCESS_TERMINATE,FALSE,pi.dwProcessId);
-			if(tmpHandle!=NULL){
-				TerminateProcess(tmpHandle,404);
+		if(pi.dwProcessId==testProcID){ //Be gentle
+			HuggerCloserPW();
 		}
+		else{ //Be rude
+			HunterKiller(L"Pocket Word");
+		}
+		
 		
 	}
 	_except(EXCEPTION_EXECUTE_HANDLER){
 		fuzzResultReturn=NON_FUZZ_EXCEPT; //Changed because  of failcriticalerrors
-
 	}
 
 	CreateThread(NULL,0,KillDialogue,0,0,0); //Just in case
@@ -278,13 +340,7 @@ DWORD threadHandler(unsigned char* funInput, int inSize){
 		timeout = WaitForSingleObject(fuzzMethod,FUZZ_TIME_OUT);
 		if(timeout==WAIT_TIMEOUT){
 			TerminateThread(fuzzMethod,404);
-			HANDLE tmpHandle=OpenProcess(PROCESS_TERMINATE,FALSE,pi.dwProcessId);
-			if(tmpHandle!=NULL){
-				TerminateProcess(tmpHandle,404);
-			}
 			free(params.fuzzIn);
-			SetKMode(FALSE);
-			SetProcPermissions(oldPerm);
 			if(fuzzResultReturn!=FUZZ_CRASH){
 				return FUZZ_TIME_ERROR;
 			}
@@ -382,6 +438,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		return 0;
 	}
 	NKvDbgPrintfW(L"\nDone");
+
+	HunterKiller(L"Pocket Word");
+	NKDbgPrintfW(L"Killing errant word processes");
 	
 	while(isFuzzing==true && sock1!=INVALID_SOCKET){
 		int socSize=sizeof(struct sockaddr_in);
@@ -478,7 +537,3 @@ int _tmain(int argc, _TCHAR* argv[])
 	NKvDbgPrintfW(L"\nExiting");
 	return 0;
 }
-
-
-
-

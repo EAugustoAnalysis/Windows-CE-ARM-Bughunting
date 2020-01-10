@@ -218,6 +218,7 @@ DWORD debugProc(DWORD timeout){
 			if(faultHand!=NULL){
 				TerminateProcess(faultHand,404);
 			}
+			return 1;
 }
 
 void fuzzFunc(unsigned char* data, int size){

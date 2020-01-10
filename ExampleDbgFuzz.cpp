@@ -115,6 +115,9 @@ void HunterKiller(wchar_t arg[]){ //Kills our process of choice
 	}while(testWindow!=NULL);
 }
 
+//Note on this function:
+//This is not a "one size fits all" solution to close the process while preventing potential freezes and errors
+//This information must be determined through use of Spy++ or Remote Spy
 void HuggerCloserPW(){ //Kills our process of choice gently
 	HWND testWindow=FindWindow(L"Worker",L"Pocket Word");
 
@@ -129,21 +132,10 @@ void HuggerCloserPW(){ //Kills our process of choice gently
 
 	}
 	
-	HWND testWindow2=FindWindow(L"Pocket Word",L"Pocket Word");
-
-	DWORD testProcID2;
-
-	if(testWindow2!=NULL){
-		GetWindowThreadProcessId(testWindow,&testProcID2);
-			
-		NKDbgPrintfW(L"Procid of main window being closed: %X\n",testProcID2);
-
-		SendMessage(testWindow2,WM_CLOSE,NULL,NULL);
-
-	}
 }
 
-//Every once in a while, a mutation creates a dialog box trying to connrect to a work network. This attempts to kill it using kernel permissions
+//Every once in a while, a mutation creates a dialog box
+//This attempts to kill it using kernel permissions, with varying degrees of success
 DWORD WINAPI KillDialogue(LPVOID lpParam){
 	HWND box=NULL;
 	HWND prevBox=NULL;
@@ -151,7 +143,7 @@ DWORD WINAPI KillDialogue(LPVOID lpParam){
 		_try{
 			box=FindWindow(L"Dialog",NULL);
 			if(box!=NULL && box!=prevBox){
-				SendMessage(box,WM_DESTROY,0,0); //This line actually kills dialog boxes quite well, just not necessarily the ones we care about
+				SendMessage(box,WM_DESTROY,0,0); 
 				//Note: It also kills connection boxes, just very slowly
 			}
 			else{

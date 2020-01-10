@@ -40,11 +40,6 @@
 #define LOGFILENAME "\\Storage Card\\pwdlogfile.txt"
 #define ENABLE_ACTIVE_LOGGING TRUE
 
-
-//Key variables
-INPUT downKey;
-INPUT enterKey;
-
 //Handle, global for benefit of exception handler
 HANDLE fuzzMethod;
 

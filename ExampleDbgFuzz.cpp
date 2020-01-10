@@ -99,11 +99,9 @@ void HunterKiller(wchar_t arg[]){ //Kills our process of choice
 	}while(testWindow!=NULL);
 }
 
-
 //Note on this function:
 //This is not a "one size fits all" solution to close the process while preventing potential freezes and errors
 //This information must be determined through use of Spy++ or Remote Spy
-void HuggerCloserPW(){ //Kills our process of choice gently
 void HuggerCloserPW(){ //Kills our process of choice gently
 	HWND testWindow=FindWindow(L"Worker",L"Pocket Word");
 
@@ -265,6 +263,7 @@ void fuzzFunc(unsigned char* data, int size){
 				HunterKiller(L"Pocket Word");
 			}
 		}
+
 		
 		
 	}

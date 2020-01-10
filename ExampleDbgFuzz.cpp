@@ -214,7 +214,7 @@ void fuzzFunc(unsigned char* data, int size){
 
 		debugProc(DBG_TIMEOUT);
 		
-		HANDLE tmpHandle=OpenProcess(PROCESS_ALL_ACCESS,TRUE,pi.dwProcessId);
+		HANDLE tmpHandle=OpenProcess(PROCESS_TERMINATE,FALSE,pi.dwProcessId);
 			if(tmpHandle!=NULL){
 				TerminateProcess(tmpHandle,404);
 		}
@@ -278,7 +278,7 @@ DWORD threadHandler(unsigned char* funInput, int inSize){
 		timeout = WaitForSingleObject(fuzzMethod,FUZZ_TIME_OUT);
 		if(timeout==WAIT_TIMEOUT){
 			TerminateThread(fuzzMethod,404);
-			HANDLE tmpHandle=OpenProcess(PROCESS_ALL_ACCESS,TRUE,pi.dwProcessId);
+			HANDLE tmpHandle=OpenProcess(PROCESS_TERMINATE,FALSE,pi.dwProcessId);
 			if(tmpHandle!=NULL){
 				TerminateProcess(tmpHandle,404);
 			}

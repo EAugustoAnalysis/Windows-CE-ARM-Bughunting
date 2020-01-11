@@ -31,3 +31,8 @@ html3.xml
 ExampleDbgFuzz.cpp
 - An example of a fault detecting fuzzer for remote processes
 - Keypress code removed to uncomplicate example
+
+Windowsmediapl.cppp
+- Successfully found DOS vulnerability in Windows Media Player 10 for Pocket PC
+- Based off of ExampleDbgFuzz.cpp
+- Will be utilized more in future to find more WMP based bugs

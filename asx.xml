@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Peach xmlns="http://peachfuzzer.com/2012/Peach" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://peachfuzzer.com/2012/Peach /peach/peach.xsd">
+	<!-- Unsigned -->
+	<Defaults>
+		<Number signed="false"/>
+	</Defaults>
+	
+	<!-- Our target: The uBook.def file-->
+	<DataModel name="target">
+		<String value="&lt;ASX version = &quot;" nullTerminated="false" mutable="false"/>
+		<String value="3.0" nullTerminated="false"/>
+		<String value="&quot;&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t\t&lt;PARAM NAME = &quot;" nullTerminated="false" mutable="false"/>
+		<String value="Encoding" nullTerminated="false" />
+		<String value="&quot; VALUE = &quot;" nullTerminated="false" mutable="false"/>
+		<String value="ANSI" nullTerminated="false" />
+		<String value="&quot; /&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t\t&lt;PARAM NAME = &quot;Custom Playlist Version&quot; VALUE = &quot;V1.0 WMP8 for CE&quot; /&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t&lt;ENTRY&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t\t&lt;ref href = &quot;\" nullTerminated="false" mutable="false"/>
+		<String value="Program Files\Windows Media Player\Welcome To Windows Media.wma" nullTerminated="false" />
+		<String value="&quot; /&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t\t&lt;ref href = &quot;." nullTerminated="false" mutable="false"/>
+		<String value="\Program Files\Windows Media Player\Welcome To Windows Media.wma" nullTerminated="false" />
+		<String value="&quot; /&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="\t&lt;/ENTRY&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" mutable="false"/>
+
+		<String value="&lt;/ASX&gt;" nullTerminated="false" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" token="true" mutable="false"/>
+		<String value="\r\n" nullTerminated="false" token="true" mutable="false"/>
+	</DataModel>
+
+	<StateModel name="TheState" initialState="Initial">
+		<State name="Initial">
+			
+			<Action type="output">
+				<DataModel ref="target"/>
+			</Action>
+
+			<Action type="close"/>
+
+			<Action type="call" method="Harness" publisher="Peach.Agent"/>
+		</State>
+
+	</StateModel>
+
+	<Agent name="TheAgent">
+		<Monitor class="Socket">
+			<Param name="Port" value="8457" />
+			<Param name="Timeout" value="10000" />
+			<Param name="StartOnCall" value="Harness"/>
+		</Monitor>
+	</Agent>
+
+	<Test name="Default">
+		<Agent ref="TheAgent"/>
+		<StateModel ref="TheState"/>
+		<Strategy class="RandomDeterministic"/>
+		<!-- Our 15s timeout here helps ensure changes are actually processed -->
+		<Publisher class="TcpClient">
+			<Param name="Host" value="192.168.56.106" />
+			<Param name="Port" value="8337" />
+			<Param name="SendTimeout" value="12000" />
+			<Param name="ConnectTimeout" value="12000" />
+		</Publisher>
+		
+		<Logger class="File">
+			<Param name="Path" value="logs"/>
+		</Logger>
+	</Test>
+
+</Peach>

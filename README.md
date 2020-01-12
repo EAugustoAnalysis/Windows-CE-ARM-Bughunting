@@ -1,6 +1,10 @@
 # Windows CE ARM Bughunting
 Various scripts and programs that support my Windows CE 4.2/6.0 exploit development and fuzzing efforts
 
+Current Bugs:
+Windows Media Player 10 for Pocket PC - Buffer overflow caused by a malformed ASX playlist file
+- DOS, pursuing RCE
+
 Current Files:
 
 HarnessHandler.cpp
@@ -39,3 +43,11 @@ Windowsmediapl.cpp
 
 WMPTest.cpp
 - Tested DOS bug in Windows Media Player 10 for Pocket PC 2003
+
+asx.xml
+- ASX file fuzzer description file for Peach Fuzzer
+- Tests one element at a time, important for manual crash minimization
+
+WMP10PPCPOC.py
+- Generates the POC file for the WMP Buffer Overflow DOS exploit
+

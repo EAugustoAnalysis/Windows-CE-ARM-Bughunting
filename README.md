@@ -2,7 +2,10 @@
 Various scripts and programs that support my Windows CE 4.2/6.0 exploit development and fuzzing efforts
 
 Current Bugs:
-- Windows Media Player 10 for Pocket PC - Buffer overflow caused by a malformed ASX playlist file - DOS, pursuing RCE
+
+Windows Media Player 10 for Pocket PC 
+- Buffer overflow caused by a malformed ASX playlist file 
+- DOS, pursuing RCE
 
 Current Files:
 

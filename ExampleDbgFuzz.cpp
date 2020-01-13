@@ -477,13 +477,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		NKvDbgPrintfW(thrdPrinter);
 
 		//Free the sock file
-		free(sockFile);
+		free(sockFileSigned);
 		if(thrd==FUZZ_CRASH){
 			if(ENABLE_ACTIVE_LOGGING){
 				//Log crash
 				FILE * logFileP = fopen(LOGFILENAME,"a");
 				fprintf(logFileP,"\nLog Crash: %X\nData:\n\n",fuzzExceptReturn);
-				fwrite(sockFileSigned,sizeof(char),sizeof(sockFileSigned),logFileP);
+				fwrite(sockFile,sizeof(char),rVal,logFileP);
 				fclose(logFileP);
 			}
 
@@ -513,7 +513,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 			closesocket(MonAgent);
 		}
-		free(sockFileSigned);
+		free(sockFile);
 		Replay:;
 	}
 
